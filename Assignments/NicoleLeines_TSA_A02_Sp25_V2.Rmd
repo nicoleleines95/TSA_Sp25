@@ -147,6 +147,8 @@ p1<-ggplot(energy_data2, aes(x = Month)) +
   theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
 print(p1)
 ```
+The time series exhibits a positive trend, with biomass energy production increasing significantly from around 1960 to 2024. There are periods of steady growth where production stabilizes before increasing again. The mean of 282.68 represents the average of the entire dataset. Earlier values (pre-1990) are predominantly below the mean, indicating lower production during this period. Post-2000 values are mostly above the mean, reflecting a shift in production to consistently higher levels. This skews the mean downward, making it unrepresentative of the higher values seen after 2010. The dataset is non-stationary, meaning the mean of the series changes over time because of the upward trend. Using the mean as a point of reference for the period after 2010 would misrepresent the central tendency for that period.
+
 
 ```{r}
 p2<-ggplot(energy_data2, aes(x = Month)) +
@@ -165,6 +167,7 @@ p2<-ggplot(energy_data2, aes(x = Month)) +
   theme(plot.title = element_text(hjust = 0.5, size = 14, face = "bold"))
 print(p2)
 ```
+Similar to biomass energy production but with fewer stabilizer periods, the renewable energy production time series shows moderate growth with some variability between 1980 and 2000. In general, the time series exhibits a strong upward trend, indicating that renewable energy production has increased substantially from the 1960s to 2024. The mean production value of 402.02 is close to the typical values in the late 1990s and early 2000s, but it is not representative of the higher production levels observed post-2010, where most values exceed the mean. This is also a non-stationary time series due to the evident upward trend. So, the mean production is not a reliable representation of the most recent trends.
 
 ```{r}
 p3<-ggplot(energy_data2, aes(x = Month)) +
@@ -184,7 +187,7 @@ p3<-ggplot(energy_data2, aes(x = Month)) +
 print(p3)
 ```
 
-
+Unlike the other time series with a clear upward trend, this series does not exhibit a strong, consistent trend. Instead, this series shows strong periodic fluctuations over time, which could represent seasonal variability such as rainfall patterns. In this context, the mean consumption value of 79.55 is a reasonable representation of the earlier periods (pre-2000), where values oscillate around this level. However, in more recent years, the series appears to hover below the mean, indicating a potential decline in average consumption. So, the mean becomes less representative of recent years due to the apparent downward shift in consumption levels.
 
 ```{r}
 p4 <- autoplot(ts_energy_data2, ts.colour = "blue", size = 0.5) +
@@ -208,8 +211,10 @@ Compute the correlation between these three series. Are they significantly corre
 cor_results <- corr.test(ts_energy_data2)
 
 # Print the correlation matrix with p-values
-print(cor_results)
+print(cor_results, short = FALSE)
 ```
+
+
 ```{r}
 # Compute the correlation matrix
 cor_matrix <- cor(ts_energy_data2, use = "complete.obs")
@@ -229,6 +234,13 @@ corrplot(cor_matrix, method = "circle", type = "upper", addCoef.col = "black",
 )
 ```
 
+Taking into consideration that a p-value < 0.05 indicates a statistically significant correlation:
+
+- The correlation between biomass Energy Production and Total Renewable Energy Production is statistically significant, with a 0.97 and a p-value of 0.00. Thus, it shows a strong positive correlation. 
+
+- The correlation between Biomass Energy Production and Hydroelectric Power Consumption is statistically significant, with a p-value of 0.01, but its weak magnitude of -0.11 means it is not practically meaningful.
+
+- The correlation between Renewable Energy Production and Hydroelectric Power Consumption is not statistically significant. There is no evidence of a meaningful relationship between these two series, with a -0.03 and a p-value of 0.47.
 
 ## Question 6
 Compute the autocorrelation function from lag 1 up to lag 40 for these three variables. What can you say about these plots? Do the three of them have the same behavior?
