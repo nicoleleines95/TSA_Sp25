@@ -245,21 +245,33 @@ Taking into consideration that a p-value < 0.05 indicates a statistically signif
 ## Question 6
 Compute the autocorrelation function from lag 1 up to lag 40 for these three variables. What can you say about these plots? Do the three of them have the same behavior?
 
+Plots 1 and 2 are similar. The ACF starts close to 1 and decays gradually. Considering that the blue dashed lines represent the confidence intervals, significant autocorrelation is present for many lags, with the bars extending beyond them. The only difference is that plot two decays slightly faster than the first series. This behavior suggests a high correlation between current and past values. 
+
+On the other hand, the ACF pattern in plot 3 is very different from the first two plots because there is no gradual decay, and only some of the lags are within the confidence interval, indicating that the fluctuations are not consistently strong. This suggests that the series might not have a strong trend. However, some lags around multiples of 12 exhibit slightly stronger correlations that could indicate a weak seasonal component. So, in general, the alternating positive and negative values suggest the series might have an irregular or non-periodic component.
+
+
 ```{r}
-BE_acf=Acf(ts_energy_data2[,1],lag.max=40, type="correlation", plot=TRUE)
+BE_acf=Acf(ts_energy_data2[,1],lag.max=40, type="correlation", plot=TRUE, main = "ACF for Total Biomass Energy Production")
 ```
 
 
 ```{r}
-RE_acf=Acf(ts_energy_data2[,2],lag.max=40, type="correlation", plot=TRUE)
+RE_acf=Acf(ts_energy_data2[,2],lag.max=40, type="correlation", plot=TRUE, main = "ACF for Renewable Energy Production")
 ```
 
 
 ```{r}
-HP_acf=Acf(ts_energy_data2[,3],lag.max=40, type="correlation", plot=TRUE)
+HP_acf=Acf(ts_energy_data2[,3],lag.max=40, type="correlation", plot=TRUE, main = "ACF for Hydroelectric Power Consumption")
 ```
 ## Question 7
 Compute the partial autocorrelation function from lag 1 to lag 40 for these three variables. How these plots differ from the ones in Q6?
+
+In general, the ACF plots show the combined effects of all lags, and the PACF plots focus on direct relationships. 
+
+The PACF for plots 1 and 2 shows a significant spike at lag 1, followed by a sharp drop. This indicates that these series have a strong direct relationship with lag one but not with higher lags after accounting for lag 1. In contrast, the ACF plots for these series show a gradual decay, reflecting the combined influence of both direct and indirect correlations across multiple lags, which is typical for trending or persistent series.
+
+The PACF for plot 3, however, shows several significant spikes at higher lags, exceeding the confidence interval. Unlike its ACF plot, which captures weaker overall correlations and appears dominated by noise, the PACF isolates specific lags with meaningful direct correlations.
+
 
 ```{r}
 BE_pacf=Pacf(ts_energy_data2[,1],lag.max=40, plot=TRUE)
