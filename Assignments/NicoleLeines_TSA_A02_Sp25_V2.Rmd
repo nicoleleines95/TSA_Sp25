@@ -274,16 +274,18 @@ The PACF for plot 3, however, shows several significant spikes at higher lags, e
 
 
 ```{r}
-BE_pacf=Pacf(ts_energy_data2[,1],lag.max=40, plot=TRUE)
+BE_pacf=Pacf(ts_energy_data2[,1],lag.max=40, plot=TRUE, main = "PACF for Total Biomass Energy Production")
 ```
 
 
 ```{r}
-RE_pacf=Pacf(ts_energy_data2[,2],lag.max=40, plot=TRUE)
+RE_pacf=Pacf(ts_energy_data2[,2],lag.max=40, plot=TRUE, main = "PACF for Renewable Energy Production")
 ```
 
 
 ```{r}
-HP_pacf=Pacf(ts_energy_data2[,3],lag.max=40, plot=TRUE)
+HP_pacf=Pacf(ts_energy_data2[,3],lag.max=40, plot=TRUE, main = "PACF for Hydroelectric Power Consumption")
 ```
+Citation
 
+OpenAI. (2025). ChatGPT (January 2025 Version) [Large language model]. https://chat.openai.com/
