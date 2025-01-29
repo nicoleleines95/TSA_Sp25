@@ -1,0 +1,458 @@
+---
+title: "ENV 790.30 - Time Series Analysis for Energy Data | Spring 2025"
+subtitle: "Assignment 3 - Due date 02/04/25"
+author: "Nicole Leines"
+output: pdf_document
+geometry: margin=2.54cm
+editor_options: 
+  chunk_output_type: inline
+---
+
+## Directions
+
+You should open the .rmd file corresponding to this assignment on RStudio. The file is available on our class repository on Github.
+
+Once you have the file open on your local machine the first thing you will do is rename the file such that it includes your first and last name (e.g., "LuanaLima_TSA_A03_Sp25.Rmd"). Then change "Student Name" on line 4 with your name.
+
+Then you will start working through the assignment by **creating code and output** that answer each question. Be sure to use this assignment document. Your report should contain the answer to each question and any plots/tables you obtained (when applicable).
+
+Please keep this R code chunk options for the report. It is easier for us to grade when we can see code and output together. And the tidy.opts will make sure that line breaks on your code chunks are automatically added for better visualization.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts=list(width.cutoff=80), 
+                      tidy=FALSE,
+                      message = FALSE, 
+                      warning = FALSE) 
+```
+
+When you have completed the assignment, **Knit** the text and code into a single PDF file. Submit this pdf using Sakai.
+
+## Questions
+
+Consider the same data you used for A2 from the spreadsheet "Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx". The data comes from the US Energy Information and Administration and corresponds to the December 2024 **Monthly** Energy Review. Once again you will work only with the following columns: Total Renewable Energy Production and Hydroelectric Power Consumption. Create a data frame structure with these two time series only.
+
+R packages needed for this assignment:"forecast","tseries", and "Kendall". Install these packages, if you haven't done yet. Do not forget to load them before running your script, since they are NOT default packages.\\
+
+```{r}
+#Load/install required package here
+library(forecast)
+library(tseries)
+library(tidyverse)
+library(readxl)
+library(openxlsx)
+library(ggplot2)
+library(Kendall)
+library(patchwork)
+library(ggplotify)
+library(cowplot)
+```
+
+## Data
+
+```{r}
+#Importing data set
+base_dir <- "D:/Geani/Box/Home Folder gnl13/Private/1 Academics/3 Time series/TSA_Sp25"
+data_dir <- file.path(base_dir, "Data")
+file_name <- "Table_10.1_Renewable_Energy_Production_and_Consumption_by_Source.xlsx"
+file_path <- file.path(data_dir, file_name)
+
+#Importing data set without change the original file using read.xlsx
+energy_data1 <- read_excel(path=file_path,
+                           skip = 12, 
+                           sheet="Monthly Data",
+                           col_names=FALSE) 
+
+#Now let's extract the column names from row 11
+read_col_names <- read_excel(path=file_path,
+                             skip = 10,n_max = 1, 
+                             sheet="Monthly Data",
+                             col_names=FALSE) 
+
+#Assign the column names to the data set
+colnames(energy_data1) <- read_col_names
+
+#Visualize the first rows of the data set
+head(energy_data1)
+
+```
+
+## Time series
+
+```{r}
+#Create a data frame structure with Total Renewable Energy Production and Hydroelectric Power Consumption
+
+column_names <- colnames(energy_data1)
+print(column_names)
+
+energy_data2 <- energy_data1[, c("Month",
+                                  "Total Renewable Energy Production",
+                                  "Hydroelectric Power Consumption")]
+
+energy_data2$Month <- as.Date(energy_data2$Month)
+
+energy_data2<-energy_data2|>
+  rename(date=Month)
+
+year1 <- year(energy_data2$date[1])
+month1 <- month(energy_data2$date[1])
+
+ts_energy_data2 <- ts(
+  data = energy_data2[,2:3],
+  start = c(year1,month1),
+  frequency = 12
+)
+
+head(ts_energy_data2)
+```
+
+##Trend Component
+
+### Q1
+
+For each time series, i.e., Renewable Energy Production and Hydroelectric Consumption create three plots: one with time series, one with the ACF and with the PACF. You may use the some code form A2, but I want all the three plots side by side as in a grid. (Hint: use function `plot_grid()` from the `cowplot` package)
+
+```{r}
+
+nvars <- ncol(ts_energy_data2)
+
+for (i in 1:nvars) {
+  
+  # 1. Time Series Plot
+  p1 <- autoplot(ts_energy_data2[, i]) +
+    geom_hline(yintercept = mean(ts_energy_data2[, i], 
+                                 na.rm = TRUE), 
+               color = "red", 
+               linetype = "dashed") +
+    labs(title = str_wrap(paste("Time Series of", colnames(ts_energy_data2)[i]), width = 30),
+         x = "Time", y = colnames(ts_energy_data2)[i]) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 2. ACF Plot
+  p2 <- ggAcf(ts_energy_data2[, i], lag.max = 40) +
+    labs(title = str_wrap(paste("ACF of", colnames(ts_energy_data2)[i]), width = 20)) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 3. PACF Plot
+  p3 <- ggPacf(ts_energy_data2[, i], lag.max = 40) +
+    labs(title = str_wrap(paste("PACF of", colnames(ts_energy_data2)[i]), width = 20)) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # Combine plots using plot_grid
+  final_plot <- plot_grid(p1, p2, p3, 
+                         ncol = 3,
+                         align = "h",
+                         axis = "tb",
+                         rel_widths = c(2, 1, 1))
+  
+  print(final_plot)
+}
+
+
+```
+
+
+### Q2
+
+From the plot in Q1, do the series Total Renewable Energy Production and Hydroelectric Power Consumption appear to have a trend? If yes, what kind of trend?
+
+The series Renewable Energy Production shows a strong increasing trend but the Hydroelectric Power Consumption fluctuating around a constant mean with no strong upward or downward movement over time so no clear long-term trend.
+
+On the other hand, the ACF for Renewable Energy Production shows very high positive autocorrelations that decay very slowly, starting near 1 and gradually declining but remaining significant even at lag 40 which is a clear indicator of a strong upward trend. While the ACF for Hydroelectric Power Consumption alternates positive and negative correlations that decay more quickly, so no exhibit a clear trend component.
+
+### Q3
+
+Use the *lm()* function to fit a linear trend to the two time series. Ask R to print the summary of the regression. Interpret the regression output, i.e., slope and intercept. Save the regression coefficients for further analysis.
+
+```{r}
+
+nobs <- nrow(energy_data2)
+
+# Create vector t
+  t <- c(1:nobs)
+
+```
+
+
+```{r}
+data_re <- data.frame("t"=t,"renewable"=energy_data2$`Total Renewable Energy Production`)
+
+#Fit a linear trend to TS of iHP
+linear_trend_model_re=lm(renewable~t,data_re)
+summary(linear_trend_model_re)
+
+re_beta0=as.numeric(linear_trend_model_re$coefficients[1])
+re_beta1=as.numeric(linear_trend_model_re$coefficients[2])
+```
+
+```{r}
+data_hy <- data.frame("t"=t,"hydroelectric"=energy_data2$`Hydroelectric Power Consumption`)
+
+linear_trend_model_hy=lm(hydroelectric~t,data_hy)
+summary(linear_trend_model_hy)
+
+hy_beta0=as.numeric(linear_trend_model_hy$coefficients[1])
+hy_beta1=as.numeric(linear_trend_model_hy$coefficients[2])
+```
+
+
+### Q4
+
+Use the regression coefficients from Q3 to detrend the series. Plot the detrended series and compare with the plots from Q1. What happened? Did anything change?
+
+```{r}
+#Create detrended series from linear trend
+linear_trend_re <- (re_beta0+re_beta1*t)
+detrend_re<-energy_data2$`Total Renewable Energy Production`- linear_trend_re
+ts_detrend_re<-ts(detrend_re, start = c(year1,month1), frequency = 12)
+
+autoplot((ts_energy_data2[,1]))+
+  autolayer(ts_detrend_re, series="Detrended")
+```
+
+```{r}
+#Create detrended series from linear trend
+linear_trend_hy <- (hy_beta0+hy_beta1*t)
+detrend_hy<-energy_data2$`Hydroelectric Power Consumption`- linear_trend_hy
+ts_detrend_hy<-ts(detrend_hy, start = c(year1,month1), frequency = 12)
+
+autoplot((ts_energy_data2[,2]))+
+  autolayer(ts_detrend_hy, series="Detrended")
+```
+
+
+
+### Q5
+
+Plot ACF and PACF for the detrended series and compare with the plots from Q1. You may use plot_grid() again to get them side by side, but not mandatory. Did the plots change? How?
+
+```{r}
+
+  # 1. Time Series Plot
+  p4 <- autoplot(ts_detrend_re) +
+    geom_hline(yintercept = mean(ts_detrend_re, 
+                                 na.rm = TRUE), 
+               color = "red", 
+               linetype = "dashed") +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 2. ACF Plot
+  p5 <- ggAcf(ts_detrend_re, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 3. PACF Plot
+  p6 <- ggPacf(ts_detrend_re, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # Combine plots using plot_grid
+  p7 <- plot_grid(p4, p5, p6, 
+                         ncol = 3,
+                         align = "h",
+                         axis = "tb",
+                         rel_widths = c(2, 1, 1))
+  
+  print(p7)
+
+```
+
+
+```{r}
+
+  # 1. Time Series Plot
+  p8 <- autoplot(ts_detrend_hy) +
+    geom_hline(yintercept = mean(ts_detrend_hy, 
+                                 na.rm = TRUE), 
+               color = "red", 
+               linetype = "dashed") +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 2. ACF Plot
+  p9 <- ggAcf(ts_detrend_hy, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 3. PACF Plot
+  p10 <- ggPacf(ts_detrend_hy, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # Combine plots using plot_grid
+  p11 <- plot_grid(p8, p9, p10, 
+                         ncol = 3,
+                         align = "h",
+                         axis = "tb",
+                         rel_widths = c(2, 1, 1))
+  
+  print(p11)
+
+```
+
+## Seasonal Component
+
+Set aside the detrended series and consider the original series again from Q1 to answer Q6 to Q8.
+
+### Q6
+
+Just by looking at the time series and the acf plots, do the series seem to have a seasonal trend? No need to run any code to answer your question. Just type in you answer below.
+
+### Q7
+
+Use function *lm()* to fit a seasonal means model (i.e. using the seasonal dummies) the two time series. Ask R to print the summary of the regression. Interpret the regression output. From the results which series have a seasonal trend? Do the results match you answer to Q6?
+
+```{r}
+#First create the seasonal dummies
+dummies_re <- seasonaldummy(ts_detrend_re) #this function only accepts ts object
+#Then fit a linear model to the seasonal dummies
+seas_means_model_re=lm(detrend_re~dummies_re)
+summary(seas_means_model_re)
+
+#Store regression coefficients
+beta_int_re=seas_means_model_re$coefficients[1]
+beta_coeff_re=seas_means_model_re$coefficients[2:12]
+```
+
+```{r}
+#First create the seasonal dummies
+dummies_hy <- seasonaldummy(ts_detrend_hy) #this function only accepts ts object
+#Then fit a linear model to the seasonal dummies
+seas_means_model_hy=lm(detrend_hy~dummies_hy)
+summary(seas_means_model_hy)
+
+#Store regression coefficients
+beta_int_hy=seas_means_model_hy$coefficients[1]
+beta_coeff_hy=seas_means_model_hy$coefficients[2:12]
+```
+
+
+### Q8
+
+Use the regression coefficients from Q7 to deseason the series. Plot the deseason series and compare with the plots from part Q1. Did anything change?
+
+```{r}
+#compute seasonal component
+seas_component_re=array(0,nobs)
+for(i in 1:nobs){
+seas_component_re[i]=(beta_int_re+beta_coeff_re%*%dummies_re[i,])
+}
+#Transform into a ts object
+ts_seasonal_component_re <- ts(seas_component_re,start=c(year1,month1),frequency=12)
+#Understanding what we did
+autoplot(ts_detrend_re,series="Observed - Trend") +
+autolayer(ts_seasonal_component_re,series="Seasonal Component",alpha=0.5) +
+ylab("") +
+xlab("") +
+labs(color="")
+```
+
+
+```{r}
+deseason_linear_re <- energy_data2$`Total Renewable Energy Production`-seas_component_re
+ts_deseason_linear_re <- ts(deseason_linear_re,start=c(year1,month1),frequency=12)
+
+autoplot(ts_energy_data2[,1], col="darkblue") +
+autolayer(ts_deseason_linear_re,series="Deseason Series" ) +
+ylab("") +
+xlab("") +
+labs(color="")
+```
+
+
+
+```{r}
+#compute seasonal component
+seas_component_hy=array(0,nobs)
+for(i in 1:nobs){
+seas_component_hy[i]=(beta_int_re+beta_coeff_hy%*%dummies_hy[i,])
+}
+#Transform into a ts object
+ts_seasonal_component_hy <- ts(seas_component_hy,start=c(year1,month1),frequency=12)
+#Understanding what we did
+autoplot(ts_detrend_hy,series="Observed - Trend") +
+autolayer(ts_seasonal_component_hy,series="Seasonal Component",alpha=0.5) +
+ylab("") +
+xlab("") +
+labs(color="")
+```
+
+
+```{r}
+deseason_linear_hy <- energy_data2$`Hydroelectric Power Consumption`-seas_component_hy
+ts_deseason_linear_hy <- ts(deseason_linear_hy,start=c(year1,month1),frequency=12)
+
+autoplot(ts_energy_data2[,2], col="darkblue") +
+autolayer(ts_deseason_linear_hy,series="Deseason Series" ) +
+ylab("") +
+xlab("") +
+labs(color="")
+```
+
+### Q9
+
+Plot ACF and PACF for the deseason series and compare with the plots from Q1. You may use plot_grid() again to get them side by side, but not mandatory. Did the plots change? How?
+
+```{r}
+
+  # 1. Time Series Plot
+  p12 <- autoplot(ts_energy_data2[,1], col="darkblue") +
+autolayer(ts_deseason_linear_re,series="" ) +
+ylab("") +
+xlab("") +
+labs(color="")
+
+  # 2. ACF Plot
+  p13 <- ggAcf(ts_seasonal_component_re, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 3. PACF Plot
+  p14 <- ggPacf(ts_seasonal_component_re, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # Combine plots using plot_grid
+  p15 <- plot_grid(p12, p13, p14, 
+                         ncol = 3,
+                         align = "h",
+                         axis = "tb",
+                         rel_widths = c(2, 1, 1))
+  
+print(p15)
+
+```
+```{r}
+
+  # 1. Time Series Plot
+  p16 <- autoplot(ts_energy_data2[,2], col="darkblue") +
+autolayer(ts_deseason_linear_hy,series="" ) +
+ylab("") +
+xlab("") +
+labs(color="")
+
+  # 2. ACF Plot
+  p17 <- ggAcf(ts_seasonal_component_hy, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # 3. PACF Plot
+  p18 <- ggPacf(ts_seasonal_component_hy, lag.max = 40) +
+    theme_minimal() +
+    theme(plot.title = element_text(size = 8))
+
+  # Combine plots using plot_grid
+  p19 <- plot_grid(p16, p17, p18, 
+                         ncol = 3,
+                         align = "h",
+                         axis = "tb",
+                         rel_widths = c(2, 1, 1))
+  
+print(p19)
+
+```
+
